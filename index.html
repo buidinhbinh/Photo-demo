@@ -1,1 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Photobooth xịn xò</title>
+  <style>
+    video, canvas {
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      width: 400px;
+      height: 300px;
+      object-fit: cover;
+      transform: scaleX(-1); /* Gương cho cam trước */
+    }
+    select, button {
+      margin-top: 10px;
+      padding: 10px 15px;
+      font-size: 16px;
+    }
+    #countdown {
+      font-size: 40px;
+      color: red;
+      font-weight: bold;
+      position: absolute;
+      top: 20px;
+      left: 180px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Photobooth Web</h2>
+  <div style="position: relative;">
+    <video id="video" autoplay playsinline></video>
+    <div id="countdown"></div>
+  </div>
 
+  <br>
+  <label>Chọn filter:</label>
+  <select id="filter">
+    <option value="none">Không có</option>
+    <option value="grayscale(100%)">Trắng đen</option>
+    <option value="sepia(80%)">Sepia</option>
+    <option value="contrast(200%) brightness(80%)">Vintage</option>
+    <option value="invert(100%)">Negative</option>
+  </select>
+
+  <br><br>
+  <button id="switchCam">Đổi camera</button>
+  <button id="capture">Chụp ảnh</button>
+  <button id="download">Tải ảnh</button>
+
+  <br><br>
+  <canvas id="canvas" width="400" height="300"></canvas>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const captureBtn = document.getElementById('capture');
+    const downloadBtn = document.getElementById('download');
+    const filterSelect = document.getElementById('filter');
+    const countdown = document.getElementById('countdown');
+    const switchCamBtn = document.getElementById('switchCam');
+
+    let stream;
+    let useFrontCamera = true;
+
+    async function startCamera() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+
+      const constraints = {
+        video: {
+          facingMode: useFrontCamera ? 'user' : 'environment'
+        }
+      };
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream;
+      } catch (err) {
+        alert('Không thể truy cập camera');
+        console.error(err);
+      }
+    }
+
+    // Filter thay đổi trên video
+    filterSelect.addEventListener('change', () => {
+      video.style.filter = filterSelect.value;
+    });
+
+    // Chụp ảnh sau đếm ngược
+    captureBtn.addEventListener('click', () => {
+      let timeLeft = 3;
+      countdown.innerText = timeLeft;
+
+      const countdownInterval = setInterval(() => {
+        timeLeft--;
+        countdown.innerText = timeLeft;
+
+        if (timeLeft === 0) {
+          clearInterval(countdownInterval);
+          countdown.innerText = '';
+          ctx.filter = filterSelect.value;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        }
+      }, 1000);
+    });
+
+    // Tải ảnh
+    downloadBtn.addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.download = 'photo.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    });
+
+    // Đổi camera trước/sau
+    switchCamBtn.addEventListener('click', () => {
+      useFrontCamera = !useFrontCamera;
+      video.style.transform = useFrontCamera ? 'scaleX(-1)' : 'scaleX(1)';
+      startCamera();
+    });
+
+    startCamera();
+  </script>
+</body>
+</html>
